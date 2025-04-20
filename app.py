@@ -112,5 +112,17 @@ def get_response(context, user_input):
     except Exception as e:
         return f"Đã xảy ra lỗi: {str(e)}"
 
+# Add this function after your imports
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# Update the upload folder path to be absolute
+app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
+
+# Add this after app configuration
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'])
+
 if __name__ == '__main__':
     app.run(debug=True)
