@@ -1,4 +1,4 @@
-# Remove MongoDB imports and config
+# Remove MongoDB-related imports and config
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from werkzeug.utils import secure_filename
 import os
@@ -97,7 +97,6 @@ def upload_file():
         
         if filename.lower().endswith('.pdf'):
             content = extract_pdf_content(file_path)
-            # Save to JSON file
             try:
                 with open(PDF_STORAGE_FILE, 'r', encoding='utf-8') as f:
                     pdf_storage = json.load(f)
@@ -108,6 +107,8 @@ def upload_file():
             
             with open(PDF_STORAGE_FILE, 'w', encoding='utf-8') as f:
                 json.dump(pdf_storage, f, ensure_ascii=False, indent=4)
+            
+            app.logger.debug(f"Saved PDF content to {PDF_STORAGE_FILE}")
         
         return jsonify({'success': True, 'filename': filename})
     
