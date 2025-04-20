@@ -3,6 +3,7 @@ from werkzeug.utils import secure_filename
 import os
 import json
 from datetime import datetime
+from PyPDF2 import PdfReader
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -50,6 +51,22 @@ def admin_dashboard():
     
     return render_template('admin_dashboard.html', chat_history=chat_history)
 
+# Add to imports
+from PyPDF2 import PdfReader
+
+# Add this function after allowed_file function
+def extract_pdf_content(pdf_path):
+    try:
+        reader = PdfReader(pdf_path)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text()
+        return text
+    except Exception as e:
+        print(f"Error extracting PDF content: {str(e)}")
+        return ""
+
+# Modify upload_file function to process PDF after upload
 @app.route('/admin/upload', methods=['POST'])
 def upload_file():
     if not session.get('admin'):
@@ -64,7 +81,15 @@ def upload_file():
     
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        
+        if filename.lower().endswith('.pdf'):
+            content = extract_pdf_content(file_path)
+            # Save extracted content to a text file
+            with open(os.path.join(app.config['UPLOAD_FOLDER'], f"{filename}.txt"), 'w', encoding='utf-8') as f:
+                f.write(content)
+        
         return jsonify({'success': True, 'filename': filename})
     
     return jsonify({'error': 'File type not allowed'})
