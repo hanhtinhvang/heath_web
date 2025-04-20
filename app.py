@@ -73,28 +73,42 @@ pdf_content_cache = {}
 # Update the upload_file function to cache PDF content
 @app.route('/admin/upload', methods=['POST'])
 def upload_file():
+    app.logger.debug("Starting file upload...")
     if not session.get('admin'):
+        app.logger.debug("Unauthorized upload attempt")
         return jsonify({'error': 'Unauthorized'}), 401
     
     if 'file' not in request.files:
+        app.logger.debug("No file part in request")
         return jsonify({'error': 'No file part'})
     
     file = request.files['file']
+    app.logger.debug(f"Received file: {file.filename}")
+    
     if file.filename == '':
+        app.logger.debug("No selected file")
         return jsonify({'error': 'No selected file'})
     
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        app.logger.debug(f"Saving file to: {file_path}")
         file.save(file_path)
         
         if filename.lower().endswith('.pdf'):
+            app.logger.debug("Processing PDF file...")
             content = extract_pdf_content(file_path)
             pdf_content_cache[filename] = content
-            # Save extracted content to a text file
-            with open(os.path.join(app.config['UPLOAD_FOLDER'], f"{filename}.txt"), 'w', encoding='utf-8') as f:
+            text_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{filename}.txt")
+            app.logger.debug(f"Saving extracted text to: {text_path}")
+            with open(text_path, 'w', encoding='utf-8') as f:
                 f.write(content)
+        
+        app.logger.debug("File upload completed successfully")
         return jsonify({'success': True, 'filename': filename})
+    
+    app.logger.debug("File type not allowed")
+    return jsonify({'error': 'File type not allowed'})
 
 # Update get_response function
 def get_response(context, user_input):
