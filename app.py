@@ -18,7 +18,8 @@ ADMIN_PASSWORD = "admin123"
 
 # At the top after imports
 import logging
-logging.basicConfig(level=logging.DEBUG)
+# Near the top, update logging config
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Update the admin_login route
 @app.route('/admin/login', methods=['GET', 'POST'])
@@ -80,6 +81,7 @@ pdf_collection = db.pdf_documents
 # Update upload_file function
 @app.route('/admin/upload', methods=['POST'])
 def upload_file():
+    app.logger.debug("Starting file upload...")
     if not session.get('admin'):
         return jsonify({'error': 'Unauthorized'}), 401
     
@@ -93,50 +95,73 @@ def upload_file():
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        pdf_storage_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), PDF_STORAGE_FILE)
+        
+        app.logger.debug(f"Saving file to: {file_path}")
         file.save(file_path)
         
         if filename.lower().endswith('.pdf'):
+            app.logger.debug("Processing PDF file...")
             content = extract_pdf_content(file_path)
+            
             try:
-                with open(PDF_STORAGE_FILE, 'r', encoding='utf-8') as f:
-                    pdf_storage = json.load(f)
-            except:
-                pdf_storage = {}
-            
-            pdf_storage[filename] = content
-            
-            with open(PDF_STORAGE_FILE, 'w', encoding='utf-8') as f:
-                json.dump(pdf_storage, f, ensure_ascii=False, indent=4)
-            
-            app.logger.debug(f"Saved PDF content to {PDF_STORAGE_FILE}")
+                if os.path.exists(pdf_storage_path):
+                    with open(pdf_storage_path, 'r', encoding='utf-8') as f:
+                        pdf_storage = json.load(f)
+                else:
+                    pdf_storage = {}
+                
+                pdf_storage[filename] = content
+                
+                with open(pdf_storage_path, 'w', encoding='utf-8') as f:
+                    json.dump(pdf_storage, f, ensure_ascii=False, indent=4)
+                
+                app.logger.debug(f"Successfully saved PDF content to storage")
+            except Exception as e:
+                app.logger.error(f"Error saving PDF content: {str(e)}")
+                return jsonify({'error': 'Failed to save PDF content'}), 500
         
         return jsonify({'success': True, 'filename': filename})
     
     return jsonify({'error': 'File type not allowed'})
 
+# Update get_response function
 def get_response(context, user_input):
     try:
         question = user_input.lower()
+        app.logger.debug(f"Processing question: {question}")
         
         if 'thông tư 50' in question or 'tt50' in question or 'tt 50' in question:
+            app.logger.debug("Detected TT50 question")
             try:
-                with open(PDF_STORAGE_FILE, 'r', encoding='utf-8') as f:
+                pdf_storage_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), PDF_STORAGE_FILE)
+                app.logger.debug(f"Looking for PDF content in: {pdf_storage_path}")
+                
+                if not os.path.exists(pdf_storage_path):
+                    app.logger.warning("PDF storage file not found")
+                    return "Xin lỗi, chưa có dữ liệu về Thông tư 50. Vui lòng liên hệ admin để cập nhật."
+                
+                with open(pdf_storage_path, 'r', encoding='utf-8') as f:
                     pdf_storage = json.load(f)
+                    app.logger.debug(f"Loaded PDF storage with {len(pdf_storage)} entries")
                 
                 for filename, content in pdf_storage.items():
+                    app.logger.debug(f"Checking file: {filename}")
                     if '50' in filename:
+                        app.logger.debug("Found matching TT50 content")
                         if 'mục đích' in question or 'nội dung' in question:
                             return f"Theo Thông tư 50:\n{content[:1000]}..."
                         elif 'phạm vi' in question:
                             return f"Phạm vi áp dụng của Thông tư 50:\n{content[1000:2000]}..."
                         else:
                             return f"Thông tư số 50 quy định về:\n{content[:500]}...\n\nBạn muốn biết thêm về phần nào?"
-            except:
-                pass
-            
-            return "Xin lỗi, tôi không tìm thấy nội dung Thông tư 50 trong cơ sở dữ liệu."
+                
+                app.logger.warning("No TT50 content found in storage")
+                return "Xin lỗi, tôi không tìm thấy nội dung Thông tư 50 trong cơ sở dữ liệu."
+            except Exception as e:
+                app.logger.error(f"Error processing TT50 question: {str(e)}")
+                return "Xin lỗi, có lỗi xảy ra khi truy xuất dữ liệu Thông tư 50."
         
-        # Existing conditions remain unchanged
         if 'đau đầu' in question:
             return "Nguyên nhân phổ biến gây đau đầu bao gồm căng thẳng, mất nước, thiếu ngủ hoặc mỏi mắt. Để giảm đau:\n" + \
                    "1. Nghỉ ngơi trong phòng yên tĩnh, tối\n" + \
