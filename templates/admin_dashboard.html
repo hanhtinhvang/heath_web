@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .upload-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ccc;
+        }
+        .chat-history {
+            margin-top: 20px;
+        }
+        .chat-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #eee;
+        }
+        .timestamp {
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <h2>Admin Dashboard</h2>
+    
+    <div class="upload-section">
+        <h3>Upload Tài Liệu Y Tế</h3>
+        <input type="file" id="file-upload" accept=".pdf,.doc,.docx,.txt">
+        <button onclick="uploadFile()">Upload</button>
+    </div>
+
+    <div class="chat-history">
+        <h3>Lịch Sử Chat</h3>
+        {% for chat in chat_history %}
+        <div class="chat-item">
+            <div class="timestamp">{{ chat.timestamp }}</div>
+            <div><strong>User:</strong> {{ chat.user_message }}</div>
+            <div><strong>Bot:</strong> {{ chat.bot_response }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        function uploadFile() {
+            const fileInput = document.getElementById('file-upload');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Vui lòng chọn file');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/admin/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Upload thành công!');
+                    fileInput.value = '';
+                } else {
+                    alert('Lỗi: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('Lỗi khi upload file');
+                console.error('Error:', error);
+            });
+        }
+    </script>
+</body>
+</html>
