@@ -110,25 +110,36 @@ def upload_file():
     app.logger.debug("File type not allowed")
     return jsonify({'error': 'File type not allowed'})
 
+# Add this function to load PDF content from files
+def load_pdf_content(filename):
+    try:
+        text_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{filename}.txt")
+        if os.path.exists(text_path):
+            with open(text_path, 'r', encoding='utf-8') as f:
+                return f.read()
+    except Exception as e:
+        app.logger.error(f"Error loading PDF content: {str(e)}")
+    return None
+
 # Update get_response function
 def get_response(context, user_input):
     try:
         question = user_input.lower()
         
-        # Check for Thông tư 50 related questions
         if 'thông tư 50' in question or 'tt50' in question or 'tt 50' in question:
-            # Search through cached PDF content
-            for filename, content in pdf_content_cache.items():
-                if '50' in filename and content:
-                    # Extract relevant sections based on the question
-                    if 'mục đích' in question or 'nội dung' in question:
-                        return f"Theo Thông tư 50:\n{content[:1000]}..."
-                    elif 'phạm vi' in question:
-                        return f"Phạm vi áp dụng của Thông tư 50:\n{content[1000:2000]}..."
-                    else:
-                        return f"Thông tư số 50 quy định về:\n{content[:500]}...\n\nBạn muốn biết thêm về phần nào? (Ví dụ: mục đích, phạm vi áp dụng)"
+            # Look for PDF content in uploads directory
+            for filename in os.listdir(app.config['UPLOAD_FOLDER']):
+                if filename.endswith('.pdf') and '50' in filename:
+                    content = load_pdf_content(filename)
+                    if content:
+                        if 'mục đích' in question or 'nội dung' in question:
+                            return f"Theo Thông tư 50:\n{content[:1000]}..."
+                        elif 'phạm vi' in question:
+                            return f"Phạm vi áp dụng của Thông tư 50:\n{content[1000:2000]}..."
+                        else:
+                            return f"Thông tư số 50 quy định về:\n{content[:500]}...\n\nBạn muốn biết thêm về phần nào? (Ví dụ: mục đích, phạm vi áp dụng)"
             
-            return "Tôi đã được cập nhật về Thông tư 50, vui lòng hỏi cụ thể về phần bạn muốn tìm hiểu."
+            return "Xin lỗi, tôi không tìm thấy nội dung Thông tư 50 trong cơ sở dữ liệu."
         
         # Existing conditions remain unchanged
         if 'đau đầu' in question:
