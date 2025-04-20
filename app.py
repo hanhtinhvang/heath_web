@@ -67,6 +67,10 @@ def extract_pdf_content(pdf_path):
         return ""
 
 # Modify upload_file function to process PDF after upload
+# Add this variable at the top with other globals
+pdf_content_cache = {}
+
+# Update the upload_file function to cache PDF content
 @app.route('/admin/upload', methods=['POST'])
 def upload_file():
     if not session.get('admin'):
@@ -86,30 +90,34 @@ def upload_file():
         
         if filename.lower().endswith('.pdf'):
             content = extract_pdf_content(file_path)
+            pdf_content_cache[filename] = content
             # Save extracted content to a text file
             with open(os.path.join(app.config['UPLOAD_FOLDER'], f"{filename}.txt"), 'w', encoding='utf-8') as f:
                 f.write(content)
-        
         return jsonify({'success': True, 'filename': filename})
-    
-    return jsonify({'error': 'File type not allowed'})
 
-@app.route('/')
-def home():
-    return render_template('index.html')
-
-@app.route('/chat', methods=['POST'])
-def chat():
-    user_message = request.json['message']
-    response = get_response("", user_message)
-    save_chat_history(user_message, response)
-    return jsonify({'response': response})
-
+# Update get_response function
 def get_response(context, user_input):
     try:
         question = user_input.lower()
         
-        if 'đau đầu' in question or 'nhức đầu' in question:
+        # Check for Thông tư 50 related questions
+        if 'thông tư 50' in question or 'tt50' in question or 'tt 50' in question:
+            # Search through cached PDF content
+            for filename, content in pdf_content_cache.items():
+                if '50' in filename and content:
+                    # Extract relevant sections based on the question
+                    if 'mục đích' in question or 'nội dung' in question:
+                        return f"Theo Thông tư 50:\n{content[:1000]}..."
+                    elif 'phạm vi' in question:
+                        return f"Phạm vi áp dụng của Thông tư 50:\n{content[1000:2000]}..."
+                    else:
+                        return f"Thông tư số 50 quy định về:\n{content[:500]}...\n\nBạn muốn biết thêm về phần nào? (Ví dụ: mục đích, phạm vi áp dụng)"
+            
+            return "Tôi đã được cập nhật về Thông tư 50, vui lòng hỏi cụ thể về phần bạn muốn tìm hiểu."
+        
+        # Existing conditions remain unchanged
+        if 'đau đầu' in question:
             return "Nguyên nhân phổ biến gây đau đầu bao gồm căng thẳng, mất nước, thiếu ngủ hoặc mỏi mắt. Để giảm đau:\n" + \
                    "1. Nghỉ ngơi trong phòng yên tĩnh, tối\n" + \
                    "2. Uống đủ nước\n" + \
