@@ -224,5 +224,25 @@ def save_chat_history(user_message, bot_response):
     except Exception as e:
         print(f"Error saving chat history: {str(e)}")
 
+# Add a new route for chat
+@app.route('/chat', methods=['POST'])
+def chat():
+    app.logger.debug("Received chat request")
+    user_message = request.json.get('message', '')
+    app.logger.debug(f"User message: {user_message}")
+    
+    response = get_response(None, user_message)
+    app.logger.debug(f"Bot response: {response}")
+    
+    # Save chat history
+    save_chat_history(user_message, response)
+    
+    return jsonify({'response': response})
+
+# Update main route to render chat interface
+@app.route('/')
+def index():
+    return render_template('index.html')
+
 if __name__ == '__main__':
     app.run(debug=True)
