@@ -124,5 +124,27 @@ app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__fil
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
+# Add after get_response function
+def save_chat_history(user_message, bot_response):
+    try:
+        chat_entry = {
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'user_message': user_message,
+            'bot_response': bot_response
+        }
+        
+        try:
+            with open('chat_history.json', 'r') as f:
+                chat_history = json.load(f)
+        except:
+            chat_history = []
+            
+        chat_history.append(chat_entry)
+        
+        with open('chat_history.json', 'w') as f:
+            json.dump(chat_history, f, indent=4)
+    except Exception as e:
+        print(f"Error saving chat history: {str(e)}")
+
 if __name__ == '__main__':
     app.run(debug=True)
