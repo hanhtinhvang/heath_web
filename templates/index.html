@@ -39,6 +39,7 @@
         function sendMessage() {
             const messageInput = document.getElementById('message-input');
             const message = messageInput.value;
+            const chatContainer = document.getElementById('chat-container');
             
             if (message.trim() === '') return;
             
@@ -52,17 +53,27 @@
             .then(response => response.json())
             .then(data => {
                 // Add messages to chat display
-                const chatDisplay = document.getElementById('chat-display');
-                chatDisplay.innerHTML += `<div>User: ${message}</div>`;
-                chatDisplay.innerHTML += `<div>Bot: ${data.response}</div>`;
+                chatContainer.innerHTML += `<div>User: ${message}</div>`;
+                chatContainer.innerHTML += `<div>Bot: ${data.response}</div>`;
                 
                 // Clear input
                 messageInput.value = '';
                 
                 // Scroll to bottom
-                chatDisplay.scrollTop = chatDisplay.scrollHeight;
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                chatContainer.innerHTML += `<div>Error: Could not send message</div>`;
             });
         }
+
+        // Add Enter key support
+        document.getElementById('message-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
     </script>
 </body>
 </html>
